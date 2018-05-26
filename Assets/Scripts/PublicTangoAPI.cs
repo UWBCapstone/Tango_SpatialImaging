@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 using System;
+using System.Runtime.InteropServices; // DllImport
 
 #if UNITY_EDITOR || UNITY_ANDROID
 using Tango;
@@ -49,6 +50,27 @@ namespace CloakingBox {
                 [DllImport(Common.TANGO_UNITY_DLL)]
                 public static extern IntPtr TangoUnity_getRenderTextureFunction();
 #endif
+
+
+        /// <summary>
+        /// Tango video overlay C callback function signature.
+        /// </summary>
+        /// <param name="context">Callback context.</param>
+        /// <param name="cameraId">Camera ID.</param>
+        /// <param name="image">Image buffer.</param>
+        /// <param name="cameraMetadata">Camera metadata.</param>
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void APIOnImageAvailable(
+            IntPtr context, TangoEnums.TangoCameraId cameraId, ref TangoImage image,
+            ref TangoCameraMetadata cameraMetadata);
+
+        /// <summary>
+        /// Tango camera texture C callback function signature.
+        /// </summary>
+        /// <param name="context">Callback context.</param>
+        /// <param name="cameraId">Camera ID.</param>
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void APIOnTextureAvailable(IntPtr context, TangoEnums.TangoCameraId cameraId);
     }
 }
 #endif

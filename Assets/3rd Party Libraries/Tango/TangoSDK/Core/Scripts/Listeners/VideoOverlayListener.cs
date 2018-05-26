@@ -423,6 +423,10 @@ namespace Tango
                 Marshal.Copy(image.m_planeData2, m_previousImageBuffer.data, image.m_planeSize0, uvPlaneSize);
 
                 m_shouldSendByteBufferMethodEvent = true;
+
+
+                // ERROR TESTING - ADDED IN
+                GameObject.FindObjectOfType<CloakingBox.PoseImageCreator>()._OnImageAvailable(callbackContext, cameraId, ref image, ref cameraMetadata);
             }
         }
 
