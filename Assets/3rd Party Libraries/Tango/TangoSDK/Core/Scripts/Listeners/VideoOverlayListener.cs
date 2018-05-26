@@ -426,7 +426,7 @@ namespace Tango
 
 
                 // ERROR TESTING - ADDED IN
-                GameObject.FindObjectOfType<CloakingBox.PoseImageCreator>()._OnImageAvailable(callbackContext, cameraId, ref image, ref cameraMetadata);
+                GameObject.FindObjectOfType<CloakingBox.PoseImageCreator>().BufferCameraImage(callbackContext, cameraId, ref image, ref cameraMetadata);
             }
         }
 

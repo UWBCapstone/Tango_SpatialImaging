@@ -18,8 +18,8 @@ namespace CloakingBox
         {
             minPos_m = minPosition;
             maxPos_m = maxPosition;
-            minRot_m = clampEulerVector(minEulerAngleRotation);
-            maxRot_m = clampEulerVector(maxEulerAngleRotation);
+            minRot_m = EulerClamper.ClampEulerVector(minEulerAngleRotation);
+            maxRot_m = EulerClamper.ClampEulerVector(maxEulerAngleRotation);
         }
 
         public bool Contains(Pose pose)
@@ -43,8 +43,9 @@ namespace CloakingBox
             Vector3 pos = pose.Position;
 
             // Check if it is above the minimum point and below the minimum point
-            Vector3 minDir = pos - minPos_m;
-            Vector3 maxDir = pos - maxPos_m;
+            // Have to account for situations where the pose points align with the min and max points (would result in a dot of 0 since the vectors turn into zeroes)
+            Vector3 minDir = ((pos - minPos_m) == Vector3.zero) ? maxPos_m - minPos_m : pos - minPos_m;
+            Vector3 maxDir = ((pos - maxPos_m) == Vector3.zero) ? minPos_m - maxPos_m : pos - maxPos_m;
 
             float dot = Vector3.Dot(minDir, maxDir); // -1 means perfectly in the center of the two points - out to 0
             // Must be less than 0 or its extending past the corner boundaries of the cube (gives a little leeway as it technically just checks for a spherical area
@@ -56,7 +57,10 @@ namespace CloakingBox
         {
             Vector3 eulers = pose.Rotation.eulerAngles;
 
-            eulers = new Vector3(clampEuler(eulers.x), clampEuler(eulers.y), clampEuler(eulers.z));
+            eulers = new Vector3(
+                EulerClamper.ClampEuler(eulers.x), 
+                EulerClamper.ClampEuler(eulers.y), 
+                EulerClamper.ClampEuler(eulers.z));
 
             bool contained = true;
 
@@ -103,26 +107,11 @@ namespace CloakingBox
 
         private bool hardRotContains(float min, float max, float value)
         {
-            value = clampEuler(value);
+            value = EulerClamper.ClampEuler(value);
 
             return
                 (value <= 360 && value >= min)
                 || (value >= 0 && value <= max);
-        }
-
-        private float clampEuler(float euler)
-        {
-            if(euler < 0)
-            {
-                euler += 360;
-            }
-
-            return euler % 360;
-        }
-
-        private Vector3 clampEulerVector(Vector3 eulers)
-        {
-            return new Vector3(clampEuler(eulers.x), clampEuler(eulers.y), clampEuler(eulers.z));
         }
         #endregion
         #endregion

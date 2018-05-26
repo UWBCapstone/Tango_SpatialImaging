@@ -7,14 +7,28 @@ namespace CloakingBox
     public class PoseImageDictionary : MonoBehaviour
     {
         #region Fields
-        private Dictionary<PoseVoxel, Texture2D> imageFileNameMap_m;
+        public bool Debugging = false;
+        private Dictionary<PoseVoxel, Texture2D> imageMap_m;
+
+        #region Debugging Fields
+        public Texture2D[] debuggingTextureArray_m;
+        public Vector3[] debuggingMinPositionArray_m;
+        public Vector3[] debuggingMaxPositionArray_m;
+        public Vector3[] debuggingMinRotationArray_m;
+        public Vector3[] debuggingMaxRotationArray_m;
+        [HideInInspector]
+        private const int debugTexArrSize = 30;
+        private int debugArrIndex = 0;
+        #endregion
         #endregion
 
         #region Methods
         #region Initialization
         public void Start()
         {
-            imageFileNameMap_m = new Dictionary<PoseVoxel, Texture2D>();
+            imageMap_m = new Dictionary<PoseVoxel, Texture2D>();
+
+            InitDebuggingTools();
         }
         #endregion
 
@@ -25,15 +39,20 @@ namespace CloakingBox
         /// <param name="tex"></param>
         public Texture2D Add(PoseVoxel key, Texture2D tex)
         {
-            if (imageFileNameMap_m.ContainsKey(key)) {
-                Texture2D copy = new Texture2D(tex.width, tex.height, tex.format, false);
-                Graphics.CopyTexture(tex, copy);
-                destroyTex(tex);
+            if (!imageMap_m.ContainsKey(key)) {
+                if (tex != null) {
+                    Texture2D copy = new Texture2D(tex.width, tex.height, tex.format, false);
+                    Graphics.CopyTexture(tex, copy);
+                    destroyTex(tex);
 
-                // Add to dictionary
-                imageFileNameMap_m.Add(key, copy);
+                    // Add to dictionary
+                    imageMap_m.Add(key, copy);
 
-                return copy;
+                    // Update debugger
+                    addToDebuggingTools(key.Min, key.Max, copy);
+                    
+                    return copy;
+                }
             }
 
             return null;
@@ -41,10 +60,13 @@ namespace CloakingBox
 
         public bool Remove(PoseVoxel key)
         {
-            if (imageFileNameMap_m.ContainsKey(key))
+            if (imageMap_m.ContainsKey(key))
             {
-                Texture2D tex = imageFileNameMap_m[key];
+                Texture2D tex = imageMap_m[key];
                 destroyTex(tex);
+
+                // Update debugger
+                ResetDebuggingTools();
 
                 return true;
             }
@@ -56,18 +78,21 @@ namespace CloakingBox
 
         public bool Contains(PoseVoxel key)
         {
-            return imageFileNameMap_m.ContainsKey(key);
+            return imageMap_m.ContainsKey(key);
         }
 
         public void Clear()
         {
             // Destroy all textures
-            foreach (var t in imageFileNameMap_m.Values)
+            foreach (var t in imageMap_m.Values)
             {
                 destroyTex(t);
             }
 
-            imageFileNameMap_m.Clear();
+            imageMap_m.Clear();
+
+            // Reset debugging tools
+            ResetDebuggingTools();
         }
 
         public void OnDestroy()
@@ -86,6 +111,50 @@ namespace CloakingBox
 #endif
             }
         }
+
+        #region Debugging
+        public void InitDebuggingTools()
+        {
+            // For debugging purposes through the script's lifetime
+            debuggingTextureArray_m = new Texture2D[debugTexArrSize];
+            debuggingMinPositionArray_m = new Vector3[debugTexArrSize];
+            debuggingMaxPositionArray_m = new Vector3[debugTexArrSize];
+            debuggingMinRotationArray_m = new Vector3[debugTexArrSize];
+            debuggingMaxRotationArray_m = new Vector3[debugTexArrSize];
+        }
+
+        public void ResetDebuggingTools()
+        {
+            clearDebuggingTools();
+            foreach(var pair in imageMap_m)
+            {
+                Pose min = pair.Key.Min;
+                Pose max = pair.Key.Max;
+                Texture2D img = pair.Value;
+
+                addToDebuggingTools(min, max, img);
+            }
+        }
+
+        private void clearDebuggingTools()
+        {
+            debugArrIndex = 0;
+            InitDebuggingTools();
+        }
+
+        private void addToDebuggingTools(Pose min, Pose max, Texture2D img)
+        {
+            int i = debugArrIndex;
+
+            debuggingTextureArray_m[i] = img;
+            debuggingMinPositionArray_m[i] = min.Position;
+            debuggingMaxPositionArray_m[i] = max.Position;
+            debuggingMinRotationArray_m[i] = min.Rotation.eulerAngles;
+            debuggingMaxRotationArray_m[i] = max.Rotation.eulerAngles;
+
+            ++debugArrIndex;
+        } 
+        #endregion
         #endregion
 
         #region Properties
@@ -93,9 +162,9 @@ namespace CloakingBox
         {
             get
             {
-                if (imageFileNameMap_m.ContainsKey(key))
+                if (imageMap_m.ContainsKey(key))
                 {
-                    Texture2D orig = imageFileNameMap_m[key];
+                    Texture2D orig = imageMap_m[key];
                     Texture2D copy = new Texture2D(orig.width, orig.height, orig.format, false);
 
                     Graphics.CopyTexture(orig, copy);

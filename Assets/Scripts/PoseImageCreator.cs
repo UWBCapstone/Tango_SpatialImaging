@@ -14,6 +14,7 @@ namespace CloakingBox
     {
         #region Fields
         public TangoApplication tangoManager;
+        public Camera editorRenderCamera;
         public byte[] imageBuffer;
         private int imageWidth = 0;
         private int imageHeight = 0;
@@ -30,42 +31,29 @@ namespace CloakingBox
                 Debug.LogError("PoseImageCreator: Tango manager not found in scene!");
             }
 
-            register();
+            //register();
         }
 
-        // ERROR TESTING - UNNECESSARY, REMOVE
-        private void register()
-        {
-            tangoManager.Register(this);
-            //VideoOverlayListener.RegisterOnTangoImageAvailable(OnTangoImageAvailableEventHandler);
-            VideoOverlayProvider.SetCallback(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, new VideoOverlayProvider.APIOnImageAvailable(_OnImageAvailable));
-
-            Debug.Log("PoseImageCreator: Registration complete.");
-        }
-
-        //public void OnTangoImageAvailableEventHandler(Tango.TangoEnums.TangoCameraId cameraId, Tango.TangoUnityImageData imageBuffer)
+        //// ERROR TESTING - UNNECESSARY, REMOVE
+        //private void register()
         //{
-        //    //Debug.Log("PoseImageCreator: OnTangoImageAvailable triggered!");
+        //    tangoManager.Register(this);
+        //    //VideoOverlayListener.RegisterOnTangoImageAvailable(OnTangoImageAvailableEventHandler);
+        //    VideoOverlayProvider.SetCallback(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, new VideoOverlayProvider.APIOnImageAvailable(_OnImageAvailable));
 
-        //    //Debug.Log("PoseImageCreator: Image buffer received! Length of data = " + imageBuffer.data.Length);
-        //    if (cameraId != TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
-        //    {
-        //        return;
-        //    }
-
-        //    // Get IntPtr
-        //    // Taken from Tango3DReconstruction...
-        //    GCHandle pinnedImageDataHandle = GCHandle.Alloc(imageBuffer.data, GCHandleType.Pinned);
-        //    IntPtr ptr = pinnedImageDataHandle.AddrOfPinnedObject();
-        //    pinnedImageDataHandle.Free();
-
-        //    texHandle = new IntPtr(ptr.ToInt32());
-
-        //    //Debug.Log("PoseImageCreator: OnTangoImageAvailableEventHandler created IntPtr of image at ptr value " + texHandle.ToInt32());
+        //    Debug.Log("PoseImageCreator: Registration complete.");
         //}
 
         // Taken from VideoOverlayListener method of the same name
-        public void _OnImageAvailable(IntPtr callbackContext, TangoEnums.TangoCameraId cameraId, ref TangoImage image, ref TangoCameraMetadata cameraMetadata)
+
+        /// <summary>
+        /// Modified the Tango library call of _OnImageAvailable in VideoOverlayListener (or VideoOverlayProvider) to call this method so that I could have access to the image seen by the camera.
+        /// </summary>
+        /// <param name="callbackContext"></param>
+        /// <param name="cameraId"></param>
+        /// <param name="image"></param>
+        /// <param name="cameraMetadata"></param>
+        public void BufferCameraImage(IntPtr callbackContext, TangoEnums.TangoCameraId cameraId, ref TangoImage image, ref TangoCameraMetadata cameraMetadata)
         {
             lock (lockObject)
             {
@@ -103,22 +91,26 @@ namespace CloakingBox
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public Texture2D MakeCameraImage()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            Debug.Log("PoseImageCreator: Making image from camera image...");
+            //Debug.Log("PoseImageCreator: Making image from camera image...");
 
-            ////IntPtr textureId = new IntPtr((int)getARTexturePointer()); // GetCameraTextureID from videooverlayprovider?
-            //IntPtr textureId = texHandle;
-            //Texture2D cameraTexture = Texture2D.CreateExternalTexture(
-            //    1080,
-            //    1920,
-            //    TextureFormat.RGBA32,
-            //    false,
-            //    false,
-            //    textureId);
+            //////IntPtr textureId = new IntPtr((int)getARTexturePointer()); // GetCameraTextureID from videooverlayprovider?
+            ////IntPtr textureId = texHandle;
+            ////Texture2D cameraTexture = Texture2D.CreateExternalTexture(
+            ////    1080,
+            ////    1920,
+            ////    TextureFormat.RGBA32,
+            ////    false,
+            ////    false,
+            ////    textureId);
 
-            //return cameraTexture;
+            ////return cameraTexture;
 
             Texture2D cameraTexture;
             lock (lockObject) {
@@ -133,8 +125,29 @@ namespace CloakingBox
 
             return cameraTexture;
 #else
+            // Assumes Editor mode
 
-            return null;
+            Texture2D cameraTexture = null;
+            lock (lockObject)
+            {
+                //// Get a render texture for the main camera
+                //RenderTexture rtTemp = new RenderTexture(renderCamera.pixelWidth, renderCamera.pixelHeight, 0, RenderTextureFormat.ARGB32);
+                //Camera.main.targetTexture = rtTemp;
+                RenderTexture rt = editorRenderCamera.targetTexture;
+                rt.width = editorRenderCamera.pixelWidth;
+                rt.height = editorRenderCamera.pixelHeight;
+
+                // Generate a texture from the render texture
+                cameraTexture = new Texture2D(rt.width, rt.height, TextureFormat.ARGB32, false);
+                Graphics.CopyTexture(rt, cameraTexture);
+                cameraTexture.Apply();
+
+                //// Undo the target texture
+                //Camera.main.targetTexture = null;
+                //GameObject.DestroyImmediate(rt);
+            }
+
+            return cameraTexture;
 #endif
         }
 

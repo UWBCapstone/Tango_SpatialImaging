@@ -2,15 +2,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PoseTranslator : MonoBehaviour {
+namespace CloakingBox
+{
+    public static class PoseTranslator
+    {
+        public static Pose GetPose(GameObject go)
+        {
+            return GetPose(go.transform);
+        }
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        public static Pose GetPose(Transform transform)
+        {
+            return GetPose(transform.position, transform.rotation);
+        }
+
+        public static Pose GetPose(Vector3 position, Quaternion rotation)
+        {
+            return new Pose(position, rotation);
+        }
+    }
 }
